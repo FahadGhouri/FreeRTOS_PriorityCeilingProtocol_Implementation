@@ -53,20 +53,65 @@
 
 #define mainNUMBER_OF_SEMAPHORS					( 3 )
 
-// TODO
+#define Task1_Priortiy	5
+#define Task2_Priortiy	4
+#define Task3_Priortiy	3
+#define Task4_Priortiy	2
+
+#define Task_Stack_Size	50
 
 #define workersUSELESS_CYCLES_PER_TIME_UNIT		( 1000000UL)
 /*-----------------------------------------------------------*/
 
-// TODO
+/* Type Definations */
+typedef struct _CustomStruct_t {
+	SemaphoreHandle_t Resource_Semaphore;
+	char Resource_Identifier;
+	TaskHandle_t* Using_Task;
+	uint8_t Ceiling_Priority;
+	uint8_t Using_Task_Priorty;
+}NewSemaphore_t;
+/*-----------------------------------------------------------*/
+
+/* Global Variable */
+NewSemaphore_t A,B,C;		//Resources
+TaskHandle_t Tasks_Handle[4];
+/*-----------------------------------------------------------*/
+
+/* Wrapper Function Prototypes */
+BaseType_t usPrioritySemaphoreWait(NewSemaphore_t* Resource, TaskHandle_t* Calling_Task, uint32_t maxWait);
+BaseType_t usPrioritySemaphoreSignal(NewSemaphore_t* Resource, TaskHandle_t* Calling_Task);
+/*-----------------------------------------------------------*/
 
 static void vUselessLoad(uint32_t ulCycles);
+static void prvTask1(void *pvParameters);
+static void prvTask2(void *pvParameters);
+static void prvTask3(void *pvParameters);
+static void prvTask4(void *pvParameters);
 
 /*-----------------------------------------------------------*/
 
 void main_exercise( void )
 {
-	// TODO
+	/* Initialize Data Structures */
+	A.Resource_Semaphore = xSemaphoreCreateMutex();
+	A.Ceiling_Priority = 4;
+	A.Resource_Identifier = 'A';
+	B.Resource_Semaphore = xSemaphoreCreateMutex();
+	B.Ceiling_Priority = 5;
+	B.Resource_Identifier = 'B';
+	C.Resource_Semaphore = xSemaphoreCreateMutex();
+	C.Ceiling_Priority = 5;
+	C.Resource_Identifier = 'C';
+
+	/* Create Tasks */
+	xTaskCreate(prvTask1,"Task1", Task_Stack_Size,NULL,Task1_Priortiy,&Tasks_Handle[0]);
+	xTaskCreate(prvTask2, "Task2", Task_Stack_Size, NULL, Task2_Priortiy, &Tasks_Handle[1]);
+	xTaskCreate(prvTask3, "Task3", Task_Stack_Size, NULL, Task3_Priortiy, &Tasks_Handle[2]);
+	xTaskCreate(prvTask4, "Task4", Task_Stack_Size, NULL, Task4_Priortiy, &Tasks_Handle[3]);
+
+	/* Start Schedular */
+	vTaskStartScheduler();
 
 	for( ;; );
 }
@@ -82,25 +127,175 @@ uint32_t ulUselessVariable = 0;
 	}
 }
 
-// TODO
+/* The Initial Delay in Release Times is modeled by vTaskDelayUntil() */
 
 static void prvTask1(void *pvParameters)
 {
-	// TODO
+	pvParameters = NULL; //For Complier Warnings
+	TickType_t xLastWakeTime;
+	/* Run Every 10 Sec */
+	const TickType_t xRelease = pdMS_TO_TICKS(10);
+	const TickType_t xFrequency = pdMS_TO_TICKS(10000);
+	// Initialise the xLastWakeTime variable with the current time.
+	xLastWakeTime = xTaskGetTickCount();
+	
+	for (;;) {
+		/* Initial Release Delay */
+		vTaskDelayUntil(&xLastWakeTime, xRelease);
 		
+		/* Task Timing Model */
+		vUselessLoad(1);
+		usPrioritySemaphoreWait(&B, &Tasks_Handle[0], portMAX_DELAY);
+		vUselessLoad(1);
+		usPrioritySemaphoreSignal(&B, &Tasks_Handle[0]);
+		vUselessLoad(1);
+		usPrioritySemaphoreWait(&C, &Tasks_Handle[0], portMAX_DELAY);
+		vUselessLoad(1);
+		usPrioritySemaphoreSignal(&C, &Tasks_Handle[0]);
+		vUselessLoad(1);
+
+		/* Wake Up in Next Period */
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	}
 }
 
 static void prvTask2(void *pvParameters)
 {
-	// TODO
+	pvParameters = NULL; //For Complier Warnings
+	TickType_t xLastWakeTime;
+	/* Run Every 10 Sec */
+	const TickType_t xRelease = pdMS_TO_TICKS(3);
+	const TickType_t xFrequency = pdMS_TO_TICKS(10000);
+	// Initialise the xLastWakeTime variable with the current time.
+	xLastWakeTime = xTaskGetTickCount();
+
+	for (;;) {
+		/* Initial Release Delay */
+		vTaskDelayUntil(&xLastWakeTime, xRelease);
+
+		/* Task Timing Model */
+		vUselessLoad(1);
+		usPrioritySemaphoreWait(&C, &Tasks_Handle[1], portMAX_DELAY);
+		vUselessLoad(2);
+		usPrioritySemaphoreSignal(&C, &Tasks_Handle[1]);
+		vUselessLoad(2);
+		usPrioritySemaphoreWait(&A, &Tasks_Handle[1], portMAX_DELAY);
+		vUselessLoad(1);
+		usPrioritySemaphoreSignal(&A, &Tasks_Handle[1]);
+		vUselessLoad(1);
+
+		/* Wake Up in Next Period */
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	}
 }
 
 static void prvTask3(void *pvParameters)
 {
-	// TODO
+	pvParameters = NULL; //For Complier Warnings
+	TickType_t xLastWakeTime;
+	/* Run Every 10 Sec */
+	const TickType_t xRelease = pdMS_TO_TICKS(5);
+	const TickType_t xFrequency = pdMS_TO_TICKS(10000);
+	// Initialise the xLastWakeTime variable with the current time.
+	xLastWakeTime = xTaskGetTickCount();
+
+	for (;;) {
+		/* Initial Release Delay */
+		vTaskDelayUntil(&xLastWakeTime, xRelease);
+
+		/* Task Timing Model */
+		vUselessLoad(2);
+		usPrioritySemaphoreWait(&B, &Tasks_Handle[2], portMAX_DELAY);
+		vUselessLoad(1);
+		usPrioritySemaphoreWait(&A, &Tasks_Handle[2], portMAX_DELAY);
+		vUselessLoad(2);
+		usPrioritySemaphoreSignal(&A, &Tasks_Handle[2]);
+		vUselessLoad(2);
+		usPrioritySemaphoreSignal(&B, &Tasks_Handle[2]);
+		vUselessLoad(1);
+
+		/* Wake Up in Next Period */
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	}
 }
 
 static void prvTask4(void *pvParameters)
 {
-	// TODO
+	pvParameters = NULL; //For Complier Warnings
+	TickType_t xLastWakeTime;
+	/* Run Every 10 Sec */
+	const TickType_t xFrequency = pdMS_TO_TICKS(10000);
+	// Initialise the xLastWakeTime variable with the current time.
+	xLastWakeTime = xTaskGetTickCount();
+
+	for (;;) {
+
+		/* Task Timing Model */
+		vUselessLoad(2);
+		usPrioritySemaphoreWait(&A, &Tasks_Handle[3], portMAX_DELAY);
+		vUselessLoad(2);
+		usPrioritySemaphoreWait(&B, &Tasks_Handle[3], portMAX_DELAY);
+		vUselessLoad(2);
+		usPrioritySemaphoreSignal(&B, &Tasks_Handle[3]);
+		vUselessLoad(2);
+		usPrioritySemaphoreSignal(&A, &Tasks_Handle[3]);
+		vUselessLoad(1);
+
+		/* Wake Up in Next Period */
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+	}
 }
+
+BaseType_t usPrioritySemaphoreWait(NewSemaphore_t* Resource, TaskHandle_t* Calling_Task, uint32_t maxWait) {
+	/* Semaphore Availablity Check */
+	if (NULL == Resource->Resource_Semaphore)
+		return pdFALSE;
+	/* Semaphore Take */
+	if (pdFALSE == xSemaphoreTake(Resource->Resource_Semaphore, pdMS_TO_TICKS(maxWait)))
+		return pdFALSE; //TimeOUT
+    /* Change Task Priority to Semaphore Priority Ceiling */
+	if (Resource->Ceiling_Priority < (uint8_t)uxTaskPriorityGet(*Calling_Task)) {
+		Resource->Using_Task_Priorty = (uint8_t)uxTaskPriorityGet(*Calling_Task);
+		/* Print to Console */
+		printf("Task <%s> acquired resource <%c> and keeps its priority of <%d> instead of changing to <%d>\n",
+			pcTaskGetName(*Calling_Task), Resource->Resource_Identifier, Resource->Using_Task_Priorty,
+			Resource->Ceiling_Priority);
+		/* Save the Task Handle */
+		Resource->Using_Task = Calling_Task;
+	}
+	else {
+		Resource->Using_Task_Priorty = (uint8_t)uxTaskPriorityGet(*Calling_Task);
+		vTaskPrioritySet(*Calling_Task, Resource->Ceiling_Priority);
+		/* Save the Task Handle */
+		Resource->Using_Task = Calling_Task;
+		/* Print to console */
+		printf("Task <%s> acquired resource <%c> and changed its priority from <%d> to <%d>\n",
+			pcTaskGetName(*Calling_Task), Resource->Resource_Identifier, Resource->Using_Task_Priorty,
+			Resource->Ceiling_Priority);
+	}
+	return pdTRUE;
+}
+/*********************************************************************/
+
+BaseType_t usPrioritySemaphoreSignal(NewSemaphore_t* Resource, TaskHandle_t* Calling_Task) {
+	/* Semaphore Availablity Check */
+	if (NULL == Resource->Resource_Semaphore)
+		return pdFALSE;
+	/* Check if some other task is trying to give semaphore other than the task which has taken it */
+	if (Resource->Using_Task != Calling_Task)
+		return pdFALSE;
+	/* Print to console */
+	printf("Task <%s> released resource <%c> and changed its priority from <%d> to <%d>\n",
+		pcTaskGetName(*Calling_Task), Resource->Resource_Identifier, (uint8_t)uxTaskPriorityGet(*Calling_Task),
+		Resource->Using_Task_Priorty);
+	/* Semaphore Give and Task Priority is changed in FreeRTOS Critical Section to prevent context switch in between */
+	taskENTER_CRITICAL();
+	/* Semaphore Give */
+	xSemaphoreGive(Resource->Resource_Semaphore);
+	/* Change Task Priority to default */
+	vTaskPrioritySet(*Calling_Task, Resource->Using_Task_Priorty);
+	taskEXIT_CRITICAL();
+
+	return pdTRUE;
+}
+/*********************************************************************/
